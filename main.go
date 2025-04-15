@@ -7,11 +7,22 @@ import (
 	"strings"
 )
 
+var cliDirectory map[string]cliCommand
+
 func main() {
-	// REPL Loop
-	// var userInput string
-	// scanner := bufio.NewScanner(strings.NewReader(userInput))
-	// fmt.Println("Scanned this --- %v", scanner)
+	cliDirectory = map[string]cliCommand{
+		"exit": {
+			name:        "exit",
+			description: "Exit the Pokedex",
+			callback:    commandExit,
+		},
+
+		"help": {
+			name:        "help",
+			description: "Displays a help message",
+			callback:    commandHelp,
+		},
+	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -19,7 +30,15 @@ func main() {
 		scanner.Scan()
 		key := scanner.Text()
 		userInput := cleanInput(key)
-		fmt.Printf("Your command was: %s\n", userInput[0])
+		// fmt.Printf("Your command was: %s\n", userInput[0])
+		command, err := cliDirectory[userInput[0]]
+		if err == false {
+			fmt.Println("Invalid Command")
+		} else {
+
+			command.callback()
+		}
+
 	}
 
 }
