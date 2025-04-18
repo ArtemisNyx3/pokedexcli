@@ -2,7 +2,6 @@ package pokeapi
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -21,7 +20,7 @@ type Location struct {
 }
 
 func GetLocations(url string)  (Location, error){
-	fmt.Println("In pokeapi package")
+	
 	var apiurl string
 	if len(url) == 0 {
 		apiurl = "https://pokeapi.co/api/v2/location-area/"

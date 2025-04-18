@@ -34,6 +34,11 @@ func main() {
 			description: "Displays the names of the next 20 locations",
 			callback:    commandMap,
 		},
+		"mapb": {
+			name:        "map back",
+			description: "Displays the names of the previous 20 locations",
+			callback:    commandMapBack,
+		},
 	}
 
 	config := configuration{
@@ -112,3 +117,16 @@ func commandMap(c *configuration) error {
 	return nil
 }
 
+func commandMapBack(c *configuration) error {
+	locations,err := pokeapi.GetLocations(c.previous)
+	if err != nil {
+		fmt.Println("Got error --- ",err)
+		return err
+	}
+	for _,result := range locations.Results{
+		fmt.Println(result.Name)
+	}
+	c.next = locations.Next
+	c.previous = locations.Previous
+	return nil
+}
