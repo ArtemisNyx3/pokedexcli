@@ -5,9 +5,16 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/ArtemisNyx3/pokedexcli/internal/pokeapi"
 )
 
 var cliDirectory map[string]cliCommand
+
+type configuration struct {
+	next     string
+	previous string
+}
 
 func main() {
 	cliDirectory = map[string]cliCommand{
@@ -22,6 +29,16 @@ func main() {
 			description: "Displays a help message",
 			callback:    commandHelp,
 		},
+		"map": {
+			name:        "map",
+			description: "Displays the names of the next 20 locations",
+			callback:    commandMap,
+		},
+	}
+
+	config := configuration{
+		next:     "",
+		previous: "",
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -32,11 +49,11 @@ func main() {
 		userInput := cleanInput(key)
 		// fmt.Printf("Your command was: %s\n", userInput[0])
 		command, err := cliDirectory[userInput[0]]
-		if err == false {
+		if !err {
 			fmt.Println("Invalid Command")
 		} else {
 
-			command.callback()
+			command.callback(&config)
 		}
 
 	}
@@ -63,16 +80,16 @@ func cleanInput(text string) []string {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(c *configuration) error
 }
 
-func commandExit() error {
+func commandExit(c *configuration) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp() error {
+func commandHelp(c *configuration) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
 	for name, cmd := range cliDirectory {
@@ -80,3 +97,18 @@ func commandHelp() error {
 	}
 	return nil
 }
+
+func commandMap(c *configuration) error {
+	locations,err := pokeapi.GetLocations(c.next)
+	if err != nil {
+		fmt.Println("Got error --- ",err)
+		return err
+	}
+	for _,result := range locations.Results{
+		fmt.Println(result.Name)
+	}
+	c.next = locations.Next
+	c.previous = locations.Previous
+	return nil
+}
+
