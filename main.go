@@ -41,15 +41,19 @@ func main() {
 			description: "Displays the names of the previous 20 locations",
 			callback:    commandMapBack,
 		},
+		"explore": {
+			name:        "explore",
+			description: "explore <area-name> : Displays the name of the pokemon in the area",
+			callback:    commandExplore,
+		},
 	}
 
 	config := configuration{
 		next:     "",
 		previous: "",
 	}
-	
 
-	cache := pokecache.NewCache(10* time.Second)
+	cache := pokecache.NewCache(10 * time.Second)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -62,8 +66,11 @@ func main() {
 		if !err {
 			fmt.Println("Invalid Command")
 		} else {
-
-			command.callback(&config,cache)
+			if len(userInput) == 1 {
+				command.callback(&config, cache, "")
+			} else {
+				command.callback(&config, cache, userInput[1])
+			}
 		}
 
 	}
@@ -90,16 +97,16 @@ func cleanInput(text string) []string {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(c *configuration, cache *pokecache.Cache) error
+	callback    func(config *configuration, cache *pokecache.Cache, arg string) error
 }
 
-func commandExit(c *configuration, cache *pokecache.Cache) error {
+func commandExit(c *configuration, cache *pokecache.Cache, arg string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(c *configuration, cache *pokecache.Cache) error {
+func commandHelp(c *configuration, cache *pokecache.Cache, arg string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
 	for name, cmd := range cliDirectory {
@@ -108,13 +115,13 @@ func commandHelp(c *configuration, cache *pokecache.Cache) error {
 	return nil
 }
 
-func commandMap(config *configuration, cache *pokecache.Cache) error {
-	locations,err := pokeapi.GetLocations(config.next, cache)
+func commandMap(config *configuration, cache *pokecache.Cache, arg string) error {
+	locations, err := pokeapi.GetLocations(config.next, cache)
 	if err != nil {
-		fmt.Println("Got error --- ",err)
+		fmt.Println("Got error --- ", err)
 		return err
 	}
-	for _,result := range locations.Results{
+	for _, result := range locations.Results {
 		fmt.Println(result.Name)
 	}
 	config.next = locations.Next
@@ -122,16 +129,30 @@ func commandMap(config *configuration, cache *pokecache.Cache) error {
 	return nil
 }
 
-func commandMapBack(c *configuration, cache *pokecache.Cache) error {
-	locations,err := pokeapi.GetLocations(c.previous, cache)
+func commandMapBack(config *configuration, cache *pokecache.Cache, arg string) error {
+	locations, err := pokeapi.GetLocations(config.previous, cache)
 	if err != nil {
-		fmt.Println("Got error --- ",err)
+		fmt.Println("Got error --- ", err)
 		return err
 	}
-	for _,result := range locations.Results{
+	for _, result := range locations.Results {
 		fmt.Println(result.Name)
 	}
-	c.next = locations.Next
-	c.previous = locations.Previous
+	config.next = locations.Next
+	config.previous = locations.Previous
+	return nil
+}
+
+func commandExplore(config *configuration, cache *pokecache.Cache, arg string) error {
+	resultJSON, err := pokeapi.ExploreLocation(arg, cache)
+
+	if err != nil {
+		fmt.Println("Got error --- ", err)
+		return err
+	}
+	for _, encounter := range resultJSON.PokemonEncounters {
+		fmt.Println(encounter.Pokemon.Name)
+	}
+
 	return nil
 }
