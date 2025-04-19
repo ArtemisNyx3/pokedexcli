@@ -11,7 +11,7 @@ import (
 	"github.com/ArtemisNyx3/pokedexcli/internal/pokecache"
 )
 
-var cliDirectory map[string]cliCommand
+var cliDirectory =  make(map[string]cliCommand )
 
 type configuration struct {
 	next     string
@@ -45,6 +45,12 @@ func main() {
 			name:        "explore",
 			description: "explore <area-name> : Displays the name of the pokemon in the area",
 			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "catch <pokemon-name> : Throw Pokeball at pokemon",
+			// TODO: Check pokemon in current area
+			callback: commandCatch,
 		},
 	}
 
@@ -100,13 +106,13 @@ type cliCommand struct {
 	callback    func(config *configuration, cache *pokecache.Cache, arg string) error
 }
 
-func commandExit(c *configuration, cache *pokecache.Cache, arg string) error {
+func commandExit(c *configuration, cache *pokecache.Cache , arg string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(c *configuration, cache *pokecache.Cache, arg string) error {
+func commandHelp(c *configuration, cache *pokecache.Cache,  arg string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
 	for name, cmd := range cliDirectory {
@@ -115,7 +121,7 @@ func commandHelp(c *configuration, cache *pokecache.Cache, arg string) error {
 	return nil
 }
 
-func commandMap(config *configuration, cache *pokecache.Cache, arg string) error {
+func commandMap(config *configuration, cache *pokecache.Cache,  arg string) error {
 	locations, err := pokeapi.GetLocations(config.next, cache)
 	if err != nil {
 		fmt.Println("Got error --- ", err)
@@ -152,6 +158,23 @@ func commandExplore(config *configuration, cache *pokecache.Cache, arg string) e
 	}
 	for _, encounter := range resultJSON.PokemonEncounters {
 		fmt.Println(encounter.Pokemon.Name)
+	}
+
+	return nil
+}
+
+func commandCatch(config *configuration, cache *pokecache.Cache, arg string) error {
+
+	result, err := pokeapi.CatchPokemon(arg, cache)
+	fmt.Printf("Throwing a Pokeball at %s...\n", arg)
+	if err != nil {
+		fmt.Println("Got error --- ", err)
+		return err
+	}
+	if result {
+		fmt.Printf("%s was caught!\n", arg)
+	} else {
+		fmt.Printf("%s escaped!\n",arg )
 	}
 
 	return nil

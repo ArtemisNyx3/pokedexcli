@@ -5,12 +5,14 @@ import (
 	"errors"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 
 	"github.com/ArtemisNyx3/pokedexcli/internal/pokecache"
 )
 
 const location_area_url = "https://pokeapi.co/api/v2/location-area/"
+const pokemon_url = "https://pokeapi.co/api/v2/pokemon/"
 
 type Location struct {
 	Count    int    `json:"count"`
@@ -29,6 +31,18 @@ type Explore struct {
 		} `json:"pokemon"`
 	} `json:"pokemon_encounters"`
 }
+
+type Pokemon struct {
+	ID             int    `json:"id"`
+	Name           string `json:"name"`
+	BaseExperience int    `json:"base_experience"`
+	Height         int    `json:"height"`
+	IsDefault      bool   `json:"is_default"`
+	Order          int    `json:"order"`
+	Weight         int    `json:"weight"`
+}
+
+var pokedex map[string]Pokemon
 
 func GetLocations(url string, cache *pokecache.Cache) (Location, error) {
 
@@ -66,11 +80,13 @@ func GetLocations(url string, cache *pokecache.Cache) (Location, error) {
 	return loc, nil
 }
 
+type Pokedex map[string]Pokemon
+
 func ExploreLocation(areaName string, cache *pokecache.Cache) (Explore, error) {
 
 	var exploreData Explore
 	if areaName == "" {
-		return exploreData, errors.New("Area name is empty")
+		return exploreData, errors.New("area name is empty")
 	}
 
 	apiurl := location_area_url + areaName
@@ -99,4 +115,44 @@ func ExploreLocation(areaName string, cache *pokecache.Cache) (Explore, error) {
 
 	return exploreData, nil
 
+}
+
+func CatchPokemon(name string, cache *pokecache.Cache ) (bool, error) {
+	var pokemonData Pokemon
+	if name == "" {
+		return false, errors.New("name is empty")
+	}
+	apiurl := pokemon_url + name
+	data, ok := cache.Get(apiurl)
+	if !ok {
+		res, err := http.Get(apiurl)
+		if err != nil {
+			log.Fatal(err)
+		}
+		data, err = io.ReadAll(res.Body)
+		cache.Add(apiurl, data)
+		res.Body.Close()
+
+		if res.StatusCode > 299 {
+			log.Fatalf("Response failed with status code: %d and\nbody: %s\n", res.StatusCode, data)
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if err := json.Unmarshal(data, &pokemonData); err != nil {
+		return false, err
+	}
+
+	// Catch Logic
+	chance := float64(rand.Intn(pokemonData.BaseExperience - 0) ) / float64(pokemonData.BaseExperience)
+	if chance >= 0.5 {
+		// Add to pokedex
+		// pokedex[name] = pokemonData
+
+		return true, nil
+	} else {
+		return false, nil
+	}
 }
