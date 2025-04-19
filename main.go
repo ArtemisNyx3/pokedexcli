@@ -58,6 +58,10 @@ func main() {
 			name:        "inspect",
 			description: "inspect <pokemon-name> : Pokedex data for pokemon",
 			callback: commandInspect,
+		},"pokedex": {
+			name:        "pokedex",
+			description: "List of pokemon with completed pokedex",
+			callback: commandPokedex,
 		},
 	}
 
@@ -199,6 +203,14 @@ func commandInspect(config *configuration, arg string) error {
 		fmt.Printf("Weight: %v\n",pokemon.Weight)
 
 
+	}
+	return nil
+}
+
+func commandPokedex (config *configuration, arg string) error {
+	fmt.Printf("Your Pokedex:\n")
+	for _,pokemon := range config.pokedex{
+		fmt.Printf("  - %s\n",pokemon.Name)
 	}
 	return nil
 }
