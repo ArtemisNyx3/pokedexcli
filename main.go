@@ -54,6 +54,10 @@ func main() {
 			description: "catch <pokemon-name> : Throw Pokeball at pokemon",
 			// TODO: Check pokemon in current area
 			callback: commandCatch,
+		},"inspect": {
+			name:        "inspect",
+			description: "inspect <pokemon-name> : Pokedex data for pokemon",
+			callback: commandInspect,
 		},
 	}
 
@@ -182,5 +186,19 @@ func commandCatch(config *configuration, arg string) error {
 		fmt.Printf("%s escaped!\n", arg)
 	}
 
+	return nil
+}
+
+func commandInspect(config *configuration, arg string) error {
+	pokemon,ok := config.pokedex[arg]
+	if !ok{
+		fmt.Printf("Haven't caught %s\n",arg)
+	}else{
+		fmt.Printf("Name: %s\n",pokemon.Name)
+		fmt.Printf("Height: %v\n",pokemon.Height)
+		fmt.Printf("Weight: %v\n",pokemon.Weight)
+
+
+	}
 	return nil
 }
