@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	"math/rand"
 	"net/http"
 
 	"github.com/ArtemisNyx3/pokedexcli/internal/pokecache"
@@ -41,8 +40,6 @@ type Pokemon struct {
 	Order          int    `json:"order"`
 	Weight         int    `json:"weight"`
 }
-
-var pokedex map[string]Pokemon
 
 func GetLocations(url string, cache *pokecache.Cache) (Location, error) {
 
@@ -117,10 +114,10 @@ func ExploreLocation(areaName string, cache *pokecache.Cache) (Explore, error) {
 
 }
 
-func CatchPokemon(name string, cache *pokecache.Cache ) (bool, error) {
+func CatchPokemon(name string, cache *pokecache.Cache) (Pokemon, error) {
 	var pokemonData Pokemon
 	if name == "" {
-		return false, errors.New("name is empty")
+		return pokemonData, errors.New("name is empty")
 	}
 	apiurl := pokemon_url + name
 	data, ok := cache.Get(apiurl)
@@ -142,17 +139,8 @@ func CatchPokemon(name string, cache *pokecache.Cache ) (bool, error) {
 	}
 
 	if err := json.Unmarshal(data, &pokemonData); err != nil {
-		return false, err
+		return pokemonData, err
 	}
 
-	// Catch Logic
-	chance := float64(rand.Intn(pokemonData.BaseExperience - 0) ) / float64(pokemonData.BaseExperience)
-	if chance >= 0.5 {
-		// Add to pokedex
-		// pokedex[name] = pokemonData
-
-		return true, nil
-	} else {
-		return false, nil
-	}
+	return pokemonData, nil
 }

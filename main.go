@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -11,11 +12,13 @@ import (
 	"github.com/ArtemisNyx3/pokedexcli/internal/pokecache"
 )
 
-var cliDirectory =  make(map[string]cliCommand )
+var cliDirectory = make(map[string]cliCommand)
 
 type configuration struct {
 	next     string
 	previous string
+	cache    *pokecache.Cache
+	pokedex  map[string]pokeapi.Pokemon
 }
 
 func main() {
@@ -57,9 +60,9 @@ func main() {
 	config := configuration{
 		next:     "",
 		previous: "",
+		cache:    pokecache.NewCache(10 * time.Second),
+		pokedex:  make(map[string]pokeapi.Pokemon),
 	}
-
-	cache := pokecache.NewCache(10 * time.Second)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -73,9 +76,9 @@ func main() {
 			fmt.Println("Invalid Command")
 		} else {
 			if len(userInput) == 1 {
-				command.callback(&config, cache, "")
+				command.callback(&config, "")
 			} else {
-				command.callback(&config, cache, userInput[1])
+				command.callback(&config, userInput[1])
 			}
 		}
 
@@ -103,16 +106,16 @@ func cleanInput(text string) []string {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(config *configuration, cache *pokecache.Cache, arg string) error
+	callback    func(config *configuration, arg string) error
 }
 
-func commandExit(c *configuration, cache *pokecache.Cache , arg string) error {
+func commandExit(c *configuration, arg string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(c *configuration, cache *pokecache.Cache,  arg string) error {
+func commandHelp(c *configuration, arg string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
 	for name, cmd := range cliDirectory {
@@ -121,8 +124,8 @@ func commandHelp(c *configuration, cache *pokecache.Cache,  arg string) error {
 	return nil
 }
 
-func commandMap(config *configuration, cache *pokecache.Cache,  arg string) error {
-	locations, err := pokeapi.GetLocations(config.next, cache)
+func commandMap(config *configuration, arg string) error {
+	locations, err := pokeapi.GetLocations(config.next, config.cache)
 	if err != nil {
 		fmt.Println("Got error --- ", err)
 		return err
@@ -135,8 +138,8 @@ func commandMap(config *configuration, cache *pokecache.Cache,  arg string) erro
 	return nil
 }
 
-func commandMapBack(config *configuration, cache *pokecache.Cache, arg string) error {
-	locations, err := pokeapi.GetLocations(config.previous, cache)
+func commandMapBack(config *configuration, arg string) error {
+	locations, err := pokeapi.GetLocations(config.previous, config.cache)
 	if err != nil {
 		fmt.Println("Got error --- ", err)
 		return err
@@ -149,8 +152,8 @@ func commandMapBack(config *configuration, cache *pokecache.Cache, arg string) e
 	return nil
 }
 
-func commandExplore(config *configuration, cache *pokecache.Cache, arg string) error {
-	resultJSON, err := pokeapi.ExploreLocation(arg, cache)
+func commandExplore(config *configuration, arg string) error {
+	resultJSON, err := pokeapi.ExploreLocation(arg, config.cache)
 
 	if err != nil {
 		fmt.Println("Got error --- ", err)
@@ -163,18 +166,20 @@ func commandExplore(config *configuration, cache *pokecache.Cache, arg string) e
 	return nil
 }
 
-func commandCatch(config *configuration, cache *pokecache.Cache, arg string) error {
+func commandCatch(config *configuration, arg string) error {
 
-	result, err := pokeapi.CatchPokemon(arg, cache)
+	pokemon, err := pokeapi.CatchPokemon(arg, config.cache)
 	fmt.Printf("Throwing a Pokeball at %s...\n", arg)
 	if err != nil {
 		fmt.Println("Got error --- ", err)
 		return err
 	}
-	if result {
+	chance := float64(rand.Intn(pokemon.BaseExperience-0)) / float64(pokemon.BaseExperience)
+	if chance >= 0.5 {
 		fmt.Printf("%s was caught!\n", arg)
+		config.pokedex[arg] = pokemon
 	} else {
-		fmt.Printf("%s escaped!\n",arg )
+		fmt.Printf("%s escaped!\n", arg)
 	}
 
 	return nil
