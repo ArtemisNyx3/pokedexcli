@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ArtemisNyx3/pokedexcli/internal/pokeapi"
+	"github.com/ArtemisNyx3/pokedexcli/internal/pokecache"
 )
 
 var cliDirectory map[string]cliCommand
@@ -45,6 +47,9 @@ func main() {
 		next:     "",
 		previous: "",
 	}
+	
+
+	cache := pokecache.NewCache(10* time.Second)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -58,7 +63,7 @@ func main() {
 			fmt.Println("Invalid Command")
 		} else {
 
-			command.callback(&config)
+			command.callback(&config,cache)
 		}
 
 	}
@@ -85,16 +90,16 @@ func cleanInput(text string) []string {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(c *configuration) error
+	callback    func(c *configuration, cache *pokecache.Cache) error
 }
 
-func commandExit(c *configuration) error {
+func commandExit(c *configuration, cache *pokecache.Cache) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(c *configuration) error {
+func commandHelp(c *configuration, cache *pokecache.Cache) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
 	for name, cmd := range cliDirectory {
@@ -103,8 +108,8 @@ func commandHelp(c *configuration) error {
 	return nil
 }
 
-func commandMap(c *configuration) error {
-	locations,err := pokeapi.GetLocations(c.next)
+func commandMap(config *configuration, cache *pokecache.Cache) error {
+	locations,err := pokeapi.GetLocations(config.next, cache)
 	if err != nil {
 		fmt.Println("Got error --- ",err)
 		return err
@@ -112,13 +117,13 @@ func commandMap(c *configuration) error {
 	for _,result := range locations.Results{
 		fmt.Println(result.Name)
 	}
-	c.next = locations.Next
-	c.previous = locations.Previous
+	config.next = locations.Next
+	config.previous = locations.Previous
 	return nil
 }
 
-func commandMapBack(c *configuration) error {
-	locations,err := pokeapi.GetLocations(c.previous)
+func commandMapBack(c *configuration, cache *pokecache.Cache) error {
+	locations,err := pokeapi.GetLocations(c.previous, cache)
 	if err != nil {
 		fmt.Println("Got error --- ",err)
 		return err
